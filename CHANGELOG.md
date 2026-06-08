@@ -43,3 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   notification dedupe).
 - Incident management: failure taxonomy, deterministic severity, JSON/JSONL
   store, and a durable admin notifier (console always, email best-effort).
+
+### Agent
+- LLM client abstraction with a deterministic offline mock and a Groq-backed
+  implementation (retries + per-run call budget + template fallback).
+- LangGraph state machine: reconcile → (optional fuzzy match) → classify →
+  decide → dispatch → verify, with dependencies injected into nodes.
+- Planner guardrails (action allow-list + `ESCALATE` fallback, WAIT only within
+  SLA) and a cross-run verifier that resolves stale exceptions.
+- `ReconciliationAgent` orchestration with run lifecycle, incident-on-failure,
+  dry-run mode, and a rich `RunOutcome` for the UI/CLI.

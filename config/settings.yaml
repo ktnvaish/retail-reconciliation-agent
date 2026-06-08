@@ -19,6 +19,8 @@ recipients:
 reconciliation:
   # Absolute amount tolerance (in rupees) when comparing expected vs actual.
   amount_tolerance: 1.00
+  # Exceptions at or above this amount are treated as high-value (escalated).
+  high_value_threshold: 1000.00
   # Per-payment-type SLA grace (in days). The planner may WAIT within grace;
   # past grace, an unmatched online obligation is flagged and emailed.
   sla_grace_days:

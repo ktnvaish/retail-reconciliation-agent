@@ -143,6 +143,7 @@ class ReconciliationConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     amount_tolerance: Decimal = Decimal("1.00")
+    high_value_threshold: Decimal = Decimal("1000.00")
     sla_grace_days: dict[PaymentType, int] = Field(default_factory=dict)
 
 

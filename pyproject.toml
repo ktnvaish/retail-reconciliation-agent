@@ -154,6 +154,10 @@ markers = [
     "integration: tests spanning multiple components",
     "e2e: end-to-end tests exercising the whole pipeline",
 ]
+filterwarnings = [
+    # A pending-deprecation notice emitted by langgraph on import; not our code.
+    "ignore::PendingDeprecationWarning",
+]
 
 # --------------------------------------------------------------------------- #
 # Coverage

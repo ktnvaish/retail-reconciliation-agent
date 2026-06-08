@@ -52,7 +52,9 @@ def test_upsert_exception_inserts_then_updates(db_session: Session) -> None:
     assert row.status == "OPEN"
     first_seen = row.first_seen
 
-    repo.upsert_exception(mismatch_key="k1", run_id="run-2", reason="CASH_MISSING", status="RESOLVED")
+    repo.upsert_exception(
+        mismatch_key="k1", run_id="run-2", reason="CASH_MISSING", status="RESOLVED"
+    )
     db_session.commit()
 
     row = repo.get_open_exception("k1")
