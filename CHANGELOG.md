@@ -11,3 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project scaffold: `uv`-managed Python 3.11 project with `src/` layout.
 - Tooling: `ruff` (lint + format), `mypy --strict`, `pytest` + coverage,
   pre-commit hooks, and GitHub Actions CI.
+- Domain models and enumerations (`models/domain.py`) with exact `Decimal` money
+  and a stable `mismatch_key` helper.
+- Pydantic-settings configuration (env) plus YAML business config with
+  `RECIPIENT_*` environment overrides.
+- Structured JSON logging (`structlog`) with `run_id` context binding.
+- SQLAlchemy ORM models and SQLite engine/session setup (`run_log`, `audit_log`,
+  `notification_log`, `exception_log`) with a DB-enforced notification
+  idempotency constraint.
+- Orders/settlements file parsers (`.xlsx` + `.csv`) with row-level validation
+  errors.
+- Deterministic sample-data generator and committed sample files covering every
+  reconciliation outcome.
