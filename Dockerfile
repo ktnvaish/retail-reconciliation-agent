@@ -1,8 +1,10 @@
 # syntax=docker/dockerfile:1
 
 # --------------------------------------------------------------------------- #
-# Stage 1 — build the virtual environment with uv (cached, reproducible)
+# Stage 1 — build the virtual environment with uv (reproducible)
 # --------------------------------------------------------------------------- #
+# No BuildKit-only features are used, so this builds with the classic Docker
+# builder and with Azure ACR/Cloud build alike.
 FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
 
 ENV UV_COMPILE_BYTECODE=1 \
@@ -11,16 +13,14 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
-# Install dependencies first (cached unless the lockfile changes).
+# Install dependencies first (this layer is cached unless the lockfile changes).
 COPY pyproject.toml uv.lock ./
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-dev
+RUN uv sync --frozen --no-install-project --no-dev
 
 # Then install the project itself.
 COPY src ./src
 COPY README.md ./
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev
 
 # --------------------------------------------------------------------------- #
 # Stage 2 — minimal runtime image (no uv, no build tools)

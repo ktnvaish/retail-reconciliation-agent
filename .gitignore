@@ -43,3 +43,6 @@ data/runtime/*
 *.swp
 .DS_Store
 Thumbs.db
+
+# Local live-run logs
+live_run.log
