@@ -55,17 +55,32 @@ flowchart LR
     API --> M["/metrics, /runs/&#123;id&#125;"]
 ```
 
-The agent is a LangGraph state machine:
+The agent is a LangGraph state machine. Blue nodes are **deterministic**; purple
+nodes are **LLM-assisted** — the "deterministic core, agentic edges" split:
 
 ```mermaid
 flowchart TD
-    reconcile --> route{unmatched on both sides and fuzzy on?}
-    route -- yes --> fuzzy --> classify
-    route -- no --> classify
-    classify --> decide --> dispatch --> verify --> END
+    START(["Upload: orders + settlements"]) --> R
+
+    R["reconcile (deterministic)<br/>match by gateway_txn_id, then order_id + payment_type; compare amounts"]
+    R --> Q{Unmatched on<br/>both sides?}
+    Q -- yes --> F["fuzzy match (LLM)<br/>propose pairings: auto-apply high confidence, flag the rest"]
+    Q -- no --> C
+    F --> C["classify (deterministic)<br/>label leftovers: cash / online missing, late, unmatched settlement"]
+    C --> D["decide (LLM + planner)<br/>severity and next action, validated against the allow-list"]
+    D --> P["dispatch (LLM draft, deterministic send)<br/>WAIT / EMAIL / ESCALATE / REQUEST_RECHECK, idempotent"]
+    P --> V["verify (deterministic)<br/>resolve stale exceptions across runs, build run summary"]
+    V --> DONE(["Audit trail, notifications, metrics"])
+
+    classDef llm fill:#7c3aed,stroke:#5b21b6,color:#fff;
+    classDef det fill:#2563eb,stroke:#1d4ed8,color:#fff;
+    class F,D,P llm;
+    class R,C,V det;
 ```
 
-See [docs/architecture.md](docs/architecture.md) for module responsibilities.
+Any node failure is caught and recorded as an **incident** with durable admin
+notification — the run never crashes silently. See
+[docs/architecture.md](docs/architecture.md) for module responsibilities.
 
 ## Quick start
 
