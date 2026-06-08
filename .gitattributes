@@ -1,0 +1,10 @@
+# Normalize line endings to LF on checkin; check out as-is.
+* text=auto eol=lf
+
+# Treat lockfiles and sample spreadsheets sensibly.
+uv.lock linguist-generated=true
+*.xlsx binary
+*.csv text
+
+# Mark generated docs/data so language stats stay accurate.
+data/** linguist-generated=true

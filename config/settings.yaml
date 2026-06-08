@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------------------
+# Non-secret application configuration (safe to commit).
+# Secrets (API keys, SMTP password) live in .env / platform secrets, never here.
+#
+# Recipient addresses below are PLACEHOLDERS for local/dev. The hosted demo
+# overrides them with real inboxes via RECIPIENT_* env vars (precedence:
+# env > yaml), so real email addresses never enter version control.
+# ---------------------------------------------------------------------------
+
+recipients:
+  store_manager: store-manager@demo.local
+  admin: admin@demo.local
+  bank: bank-ops@demo.local
+  payment_gateways:
+    RAZORPAY: razorpay-support@demo.local
+    PAYU: payu-support@demo.local
+    CASHFREE: cashfree-support@demo.local
+
+reconciliation:
+  # Absolute amount tolerance (in rupees) when comparing expected vs actual.
+  amount_tolerance: 1.00
+  # Per-payment-type SLA grace (in days). The planner may WAIT within grace;
+  # past grace, an unmatched online obligation is flagged and emailed.
+  sla_grace_days:
+    CASH: 1
+    UPI: 1
+    CARD: 2
+    NETBANKING: 2
+    WALLET: 1
+
+planner:
+  allowed_actions:
+    - WAIT
+    - EMAIL_STORE_MANAGER
+    - EMAIL_PG
+    - EMAIL_BANK
+    - ESCALATE
+    - REQUEST_RECHECK
+  # Applied when the LLM returns an unknown/malformed action.
+  off_list_fallback: ESCALATE
+
+fuzzy_match:
+  enabled: true
+  # confidence >= auto_apply_threshold  -> auto-pair (recorded in audit)
+  auto_apply_threshold: 0.85
+  # review_threshold <= confidence < auto_apply_threshold -> email Admin
+  review_threshold: 0.50
+
+resilience:
+  email_retry_attempts: 3
+  email_retry_min_seconds: 1
+  email_retry_max_seconds: 8
+  circuit_breaker_fail_max: 3
+  circuit_breaker_reset_seconds: 30
+
+incidents:
+  # Relative to DATA_DIR. One JSON per incident plus an append-only incidents.jsonl.
+  dirname: incidents
+  # Always write incidents.jsonl + console; email to admin is best-effort.
+  admin_email_best_effort: true
