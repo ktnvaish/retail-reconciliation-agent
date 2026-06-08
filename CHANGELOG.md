@@ -62,3 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional `DEMO_ACCESS_KEY` gate and a 5 MB upload limit for safe public hosting.
 - Typer CLI: `serve`, `run`, `demo`, `init-db` (also runnable via
   `python -m reconcile`).
+
+### Deployment, docs & e2e
+- Multi-stage `Dockerfile` (uv builder + slim non-root runtime, binds `$PORT`),
+  `.dockerignore`, and `compose.yaml` for local container runs.
+- Azure Container Apps deployment guide (`deploy/azure-container-app.md`).
+- Documentation set: architecture, input schema, resilience, and telemetry
+  (`docs/`).
+- End-to-end tests asserting correct recipient routing, incident-on-bad-input,
+  and the CLI demo flow.
+- Comprehensive README (setup, usage, schema, design decisions, deployment).

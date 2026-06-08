@@ -1,0 +1,26 @@
+# Local container run with docker compose.
+# Build + run:  docker compose up --build
+# Then open:    http://localhost:8000
+#
+# By default this runs fully offline (mock LLM + mock notifier). To exercise the
+# real providers, create a .env (see .env.example) and switch NOTIFIER / MOCK_LLM.
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+      MOCK_LLM: "true"
+      NOTIFIER: "mock"
+      DATA_DIR: /app/data/runtime
+      DATABASE_URL: sqlite:////app/data/runtime/reconcile.db
+      LOG_LEVEL: INFO
+    # Uncomment to load secrets/overrides from a local .env file:
+    # env_file: .env
+    volumes:
+      # Persist runtime data (SQLite, incidents, outbox) across restarts.
+      - reconcile-data:/app/data/runtime
+
+volumes:
+  reconcile-data:
