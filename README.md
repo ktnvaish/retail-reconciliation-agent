@@ -281,6 +281,23 @@ az containerapp up --name reconcileflow --resource-group <rg> \
 Secrets live in Container Apps secrets (never in the image); hosted state is
 ephemeral by design.
 
+### CI/CD
+
+Two GitHub Actions workflows:
+
+- **CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) — on every push
+  and PR to `main`: `ruff` lint + format check, `mypy --strict`, and the full
+  `pytest` suite (offline, with coverage).
+- **CD** ([.github/workflows/deploy.yml](.github/workflows/deploy.yml)) — on
+  push to `main` that touches app code: builds the image in **Azure Container
+  Registry** (`az acr build`, no runner Docker needed), rolls it out to the
+  Container App as a new SHA-tagged revision, shifts 100% traffic to it,
+  deactivates the old revision, and smoke-tests `/healthz`. Auth uses an
+  `AZURE_CREDENTIALS` service-principal secret scoped to the resource group.
+
+So **push to `main` ⇒ live in a couple of minutes**, with the deployed image
+traceable to its commit SHA.
+
 ## Design decisions
 
 - **Deterministic core, agentic edges.** Money math and matching must be exact
