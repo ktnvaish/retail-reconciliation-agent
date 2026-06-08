@@ -185,6 +185,15 @@ def build_agent(
     session_factory: Callable[[], Session],
 ) -> ReconciliationAgent:
     """Wire a fully configured reconciliation agent."""
+    return ReconciliationAgent(build_dependencies(settings, config, session_factory))
+
+
+def build_dependencies(
+    settings: AppSettings,
+    config: AppConfig,
+    session_factory: Callable[[], Session],
+) -> AgentDependencies:
+    """Wire the agent's dependencies (also reused by the API for telemetry)."""
     notifications = build_notification_service(settings, config.resilience, session_factory)
     incidents = IncidentService(
         store=IncidentStore(settings.incidents_dir),
@@ -192,7 +201,7 @@ def build_agent(
         notification_service=notifications,
         best_effort_email=config.incidents.admin_email_best_effort,
     )
-    deps = AgentDependencies(
+    return AgentDependencies(
         config=config,
         llm=build_llm_client(settings),
         notifications=notifications,
@@ -200,4 +209,3 @@ def build_agent(
         session_factory=session_factory,
         fuzzy_enabled=config.fuzzy_match.enabled,
     )
-    return ReconciliationAgent(deps)

@@ -1,0 +1,20 @@
+{% extends "base.html" %} {% block title %}Validation error · ReconcileFlow{% endblock %} {% block content %}
+<section class="card">
+  <h1>Could not process the upload</h1>
+  <p class="banner err">{{ message }}</p>
+  {% if incident_id %}
+  <p class="muted">Incident logged: <code>{{ incident_id }}</code></p>
+  {% endif %}
+
+  {% if errors %}
+  <h2>Details</h2>
+  <ul class="errors">
+    {% for err in errors %}
+    <li><code>{{ err }}</code></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <p class="actions"><a class="btn" href="/">Back to upload</a></p>
+</section>
+{% endblock %}

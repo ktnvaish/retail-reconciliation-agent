@@ -53,3 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   SLA) and a cross-run verifier that resolves stale exceptions.
 - `ReconciliationAgent` orchestration with run lifecycle, incident-on-failure,
   dry-run mode, and a rich `RunOutcome` for the UI/CLI.
+
+### API, UI & CLI
+- FastAPI app with a minimal Jinja2 web UI (upload page, results page with
+  summary cards, exception table, and expandable email previews).
+- Endpoints: `GET /`, `POST /reconcile`, `POST /demo`, `GET /runs/{id}`,
+  `GET /metrics`, `GET /healthz`, with per-request id binding and upload caps.
+- Optional `DEMO_ACCESS_KEY` gate and a 5 MB upload limit for safe public hosting.
+- Typer CLI: `serve`, `run`, `demo`, `init-db` (also runnable via
+  `python -m reconcile`).

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}ReconcileFlow Agent{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/">ReconcileFlow<span>Agent</span></a>
+      <nav>
+        <a href="/">Reconcile</a>
+        <a href="/metrics">Metrics</a>
+        <a href="/healthz">Health</a>
+      </nav>
+    </header>
+    <main class="container">{% block content %}{% endblock %}</main>
+    <footer class="site-footer">
+      <span>Agentic retail payment reconciliation &middot; deterministic core, LLM-assisted decisions</span>
+    </footer>
+  </body>
+</html>

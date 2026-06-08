@@ -34,7 +34,7 @@ class IncidentService:
         notification_service: NotificationService | None = None,
         best_effort_email: bool = True,
     ) -> None:
-        self._store = store
+        self.store = store
         self._admin_email = admin_email
         self._notification_service = notification_service
         self._best_effort_email = best_effort_email
@@ -49,7 +49,7 @@ class IncidentService:
         remediation: str | None = None,
     ) -> Incident:
         """Persist an incident and notify the admin durably."""
-        incident = self._store.create(
+        incident = self.store.create(
             run_id=run_id,
             failure_type=failure_type,
             root_cause=root_cause,

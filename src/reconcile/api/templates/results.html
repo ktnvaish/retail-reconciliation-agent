@@ -1,0 +1,73 @@
+{% extends "base.html" %} {% block title %}Run {{ outcome.run_id[:8] }} · ReconcileFlow{% endblock %} {% block content %}
+<section class="card">
+  <div class="run-head">
+    <h1>Reconciliation result</h1>
+    <span class="badge {{ 'ok' if outcome.status == 'completed' else 'err' }}">{{ outcome.status }}</span>
+  </div>
+  <p class="muted">
+    Run <code>{{ outcome.run_id }}</code>
+    {% if demo %}<span class="tag">sample data</span>{% endif %}
+    &middot; <a href="/runs/{{ outcome.run_id }}">view audit JSON</a>
+  </p>
+
+  {% if outcome.incident_id %}
+  <p class="banner err">An incident was raised: <code>{{ outcome.incident_id }}</code></p>
+  {% endif %}
+
+  <div class="cards">
+    <div class="stat"><span class="num">{{ outcome.orders_count }}</span><span class="lbl">orders</span></div>
+    <div class="stat"><span class="num">{{ outcome.summary.get('matched', 0) }}</span><span class="lbl">matched</span></div>
+    <div class="stat"><span class="num">{{ outcome.summary.get('exceptions_total', 0) }}</span><span class="lbl">exceptions</span></div>
+    <div class="stat"><span class="num">{{ outcome.summary.get('notifications', {}).get('SENT', 0) }}</span><span class="lbl">emails sent</span></div>
+    <div class="stat"><span class="num">{{ outcome.fuzzy_auto_applied }}</span><span class="lbl">fuzzy matched</span></div>
+  </div>
+</section>
+
+{% if outcome.exceptions %}
+<section class="card">
+  <h2>Exceptions &amp; decisions</h2>
+  <table class="grid">
+    <thead>
+      <tr>
+        <th>Reason</th><th>Order</th><th>Settlement</th><th>Type</th>
+        <th>Expected</th><th>Actual</th><th>SLA</th><th>Severity</th><th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for exc in outcome.exceptions %}
+      <tr>
+        <td><span class="reason">{{ exc.reason }}</span></td>
+        <td>{{ exc.order_id or '—' }}</td>
+        <td>{{ exc.settlement_id or '—' }}</td>
+        <td>{{ exc.payment_type or '—' }}</td>
+        <td>{{ exc.expected_amount or '—' }}</td>
+        <td>{{ exc.actual_amount or '—' }}</td>
+        <td>{{ exc.sla_status }}</td>
+        <td><span class="sev {{ exc.severity|lower }}">{{ exc.severity }}</span></td>
+        <td><span class="action">{{ exc.action }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if outcome.emails %}
+<section class="card">
+  <h2>Notifications ({{ outcome.emails|length }})</h2>
+  {% for email in outcome.emails %}
+  <details class="email">
+    <summary>
+      <span class="pill {{ email.status|lower }}">{{ email.status }}</span>
+      <strong>{{ email.recipient_role }}</strong>
+      <span class="muted">{{ email.recipient_email }}</span>
+      — {{ email.subject }}
+    </summary>
+    <pre class="email-body">{{ email.body }}</pre>
+  </details>
+  {% endfor %}
+</section>
+{% endif %}
+
+<p class="actions"><a class="btn" href="/">Reconcile another pair</a></p>
+{% endblock %}

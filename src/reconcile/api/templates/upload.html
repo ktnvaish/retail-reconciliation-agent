@@ -1,0 +1,44 @@
+{% extends "base.html" %} {% block content %}
+<section class="card">
+  <h1>Reconcile orders &amp; settlements</h1>
+  <p class="muted">
+    Upload an orders file and a settlements file (<code>.xlsx</code> or
+    <code>.csv</code>). The agent reconciles them, decides what to do about each
+    mismatch, and notifies the right stakeholder.
+  </p>
+
+  <form action="/reconcile" method="post" enctype="multipart/form-data" class="form">
+    <div class="field">
+      <label for="orders">Orders file</label>
+      <input id="orders" name="orders" type="file" accept=".csv,.xlsx" required />
+    </div>
+    <div class="field">
+      <label for="settlements">Settlements file</label>
+      <input id="settlements" name="settlements" type="file" accept=".csv,.xlsx" required />
+    </div>
+    {% if demo_key_required %}
+    <div class="field">
+      <label for="demo_key">Demo access key</label>
+      <input id="demo_key" name="demo_key" type="password" placeholder="required" />
+    </div>
+    {% endif %}
+    <label class="checkbox">
+      <input type="checkbox" name="dry_run" value="true" />
+      Dry run (compute &amp; preview emails, send nothing)
+    </label>
+    <button type="submit" class="btn primary">Reconcile</button>
+  </form>
+</section>
+
+<section class="card subtle">
+  <h2>No files handy?</h2>
+  <p class="muted">Run the agent against the bundled sample dataset.</p>
+  <form action="/demo" method="post">
+    <label class="checkbox">
+      <input type="checkbox" name="dry_run" value="true" />
+      Dry run
+    </label>
+    <button type="submit" class="btn">Run sample data</button>
+  </form>
+</section>
+{% endblock %}
