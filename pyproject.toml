@@ -60,8 +60,8 @@ dev = [
 reconcile = "reconcile.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/your-org/retail-reconciliation-agent"
-Issues = "https://github.com/your-org/retail-reconciliation-agent/issues"
+Homepage = "https://github.com/ktnvaish/retail-reconciliation-agent"
+Issues = "https://github.com/ktnvaish/retail-reconciliation-agent/issues"
 
 [build-system]
 requires = ["hatchling"]

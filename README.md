@@ -6,7 +6,7 @@
 > complete audit trail — with circuit breaking, retries, idempotency, and structured
 > telemetry throughout.
 
-[![CI](https://github.com/your-org/retail-reconciliation-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/retail-reconciliation-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/ktnvaish/retail-reconciliation-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/ktnvaish/retail-reconciliation-agent/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11+-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
