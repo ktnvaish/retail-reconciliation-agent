@@ -33,3 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SLA evaluation (per-payment-type grace, overridable as-of date).
 - Routing rules mapping each exception to recipient roles + emails with a
   `responsible_party` override, plus stable `mismatch_key` computation.
+
+### Notifications, resilience & incidents
+- Notifier protocol with mock / Resend / SMTP implementations and a factory.
+- `NotificationService`: idempotent, retried (tenacity), circuit-broken
+  (pybreaker) email dispatch that records every attempt.
+- Audit repository (run lifecycle, append-only typed events with telemetry,
+  cross-run exception lifecycle) and idempotency helpers (`input_hash`,
+  notification dedupe).
+- Incident management: failure taxonomy, deterministic severity, JSON/JSONL
+  store, and a durable admin notifier (console always, email best-effort).

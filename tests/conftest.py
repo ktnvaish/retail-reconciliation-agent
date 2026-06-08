@@ -79,3 +79,9 @@ def db_session(db_engine: Engine) -> Iterator[Session]:
         yield session
     finally:
         session.close()
+
+
+@pytest.fixture
+def session_factory(db_engine: Engine) -> sessionmaker[Session]:
+    """A session factory bound to the temp engine (for services)."""
+    return sessionmaker(bind=db_engine, expire_on_commit=False, future=True)
