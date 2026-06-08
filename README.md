@@ -16,25 +16,6 @@ Open it, click **Run sample data**, and watch the agent reconcile, decide, and d
 
 ---
 
-## Contents
-
-- [What it does](#what-it-does)
-- [Architecture](#architecture)
-- [Quick start](#quick-start)
-- [Using the web UI](#using-the-web-ui)
-- [Using the CLI](#using-the-cli)
-- [Input file schema](#input-file-schema)
-- [How reconciliation works](#how-reconciliation-works)
-- [Where the LLM is (and isn't) used](#where-the-llm-is-and-isnt-used)
-- [Resilience & operations](#resilience--operations)
-- [Telemetry & observability](#telemetry--observability)
-- [Configuration](#configuration)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Design decisions](#design-decisions)
-- [Project layout](#project-layout)
-- [Limitations & next steps](#limitations--next-steps)
-
 ## What it does
 
 Finance/ops teams reconcile daily orders against bank/payment-gateway settlements
@@ -133,39 +114,20 @@ uv run reconcile init-db                    # create the SQLite schema
 
 ## Input file schema
 
-We define the formats. Both `.xlsx` and `.csv` are accepted. Full reference:
-[docs/excel_schema.md](docs/excel_schema.md). Sample files live in
-[data/samples/](data/samples).
+We define the formats; both `.xlsx` and `.csv` are accepted. Bundled examples are
+in [data/samples/](data/samples), and the full column-by-column reference (types,
+required/optional, enums, validation rules) is in
+[docs/excel_schema.md](docs/excel_schema.md).
 
-**Orders** — one row per payment obligation (an order may span multiple rows):
+In short:
 
-| Column                            | Required  | Notes                                                              |
-| --------------------------------- | --------- | ------------------------------------------------------------------ |
-| `order_id`                        | yes       | Repeated across an order's payment rows                            |
-| `order_date`                      | yes       | `YYYY-MM-DD`                                                       |
-| `store_id`                        | yes       |                                                                    |
-| `amount`                          | yes       | Order gross total (same on every row of the order)                 |
-| `payment_type`                    | yes       | `CASH \| UPI \| CARD \| NETBANKING \| WALLET`                      |
-| `payment_amount`                  | yes       | This obligation's amount                                           |
-| `payment_gateway`                 | if online | `RAZORPAY \| PAYU \| CASHFREE`                                     |
-| `gateway_txn_id`                  | if online | Unique per online obligation                                       |
-| `responsible_party`               | no        | Override role: `STORE_MANAGER \| PAYMENT_GATEWAY \| BANK \| ADMIN` |
-| `status`                          | yes       | `PLACED \| CANCELLED` (only `PLACED` is reconciled)                |
-| `customer_name`, `customer_email` | no        |                                                                    |
-
-**Settlements** — one row per money-received entry:
-
-| Column                       | Required | Notes                                  |
-| ---------------------------- | -------- | -------------------------------------- |
-| `settlement_id`              | yes      | Unique within the file                 |
-| `settlement_date`            | yes      | `YYYY-MM-DD`                           |
-| `payment_type`               | yes      | Same enum as orders                    |
-| `amount`                     | yes      | Gross amount                           |
-| `net_amount`                 | no       | Defaults to `amount - fee`             |
-| `fee`                        | no       | Defaults to `0`                        |
-| `source`                     | yes      | `BANK \| RAZORPAY \| PAYU \| CASHFREE` |
-| `order_id`, `gateway_txn_id` | no       | Join keys (gateway txn preferred)      |
-| `reference_id`               | no       | Bank/PG reference (e.g. UTR)           |
+- **Orders** — one row per *payment obligation*, so an order may span multiple
+  rows (e.g. part CARD + part CASH). Key columns: `order_id`, `order_date`,
+  `amount` (order total), `payment_type`, `payment_amount` (this row),
+  `payment_gateway` / `gateway_txn_id` (online only), `status`.
+- **Settlements** — one row per money-received entry. Key columns:
+  `settlement_id`, `settlement_date`, `payment_type`, `amount`, `source`, and the
+  join keys `gateway_txn_id` / `order_id`.
 
 ## How reconciliation works
 
