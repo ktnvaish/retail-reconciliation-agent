@@ -23,3 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   errors.
 - Deterministic sample-data generator and committed sample files covering every
   reconciliation outcome.
+
+### Reconciliation core
+- Obligation builder with per-order sum validation (`ORDER_SUM_MISMATCH`).
+- Deterministic matcher: key matching (`gateway_txn_id`, then
+  `(order_id, payment_type)`), amount comparison (matched / short / excess /
+  duplicate), and leftover classification (cash/online missing, late, unmatched
+  settlement).
+- SLA evaluation (per-payment-type grace, overridable as-of date).
+- Routing rules mapping each exception to recipient roles + emails with a
+  `responsible_party` override, plus stable `mismatch_key` computation.

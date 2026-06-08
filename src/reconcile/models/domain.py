@@ -276,6 +276,39 @@ class Obligation(BaseModel):
     customer_email: str | None = None
 
 
+class MatchedPair(BaseModel):
+    """An obligation that was cleanly satisfied by exactly one settlement."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    obligation: Obligation
+    settlement: Settlement
+
+
+class ExceptionRecord(BaseModel):
+    """A detected reconciliation problem requiring attention.
+
+    Holds *detection facts* only — no recipient or planner decision. Routing and
+    action selection are layered on later by the rules engine and the agent.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    reason: ExceptionReason
+    status: ObligationStatus
+    order_id: str | None = None
+    settlement_id: str | None = None
+    payment_type: PaymentType | None = None
+    store_id: str | None = None
+    payment_gateway: PaymentGateway | None = None
+    expected_amount: Decimal | None = None
+    actual_amount: Decimal | None = None
+    responsible_party: RecipientRole | None = None
+    age_days: int | None = None
+    sla_status: SlaStatus = SlaStatus.NA
+    detail: str | None = None
+
+
 # --------------------------------------------------------------------------- #
 # Helpers
 # --------------------------------------------------------------------------- #
