@@ -14,6 +14,9 @@
 &nbsp;·&nbsp; running on Azure Container Apps with **real Groq LLM + real Resend email**.
 Open it, click **Run sample data**, and watch the agent reconcile, decide, and dispatch.
 
+**📐 Design docs:** the product requirements and delivery plan behind this build live
+in [docs/PRD.md](docs/PRD.md) and [docs/PLAN.md](docs/PLAN.md).
+
 ---
 
 ## What it does
@@ -292,7 +295,7 @@ src/reconcile/
 ├── app.py           # FastAPI factory + app context
 └── cli.py           # Typer CLI
 tests/{unit,integration,e2e}/
-docs/                # architecture, schema, resilience, telemetry, deployment
+docs/                # PRD, PLAN, architecture, schema, resilience, telemetry, deployment
 ```
 
 ## Limitations & next steps
