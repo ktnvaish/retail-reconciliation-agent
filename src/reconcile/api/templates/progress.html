@@ -1,0 +1,58 @@
+{% extends "base.html" %} {% block title %}Reconciling… · ReconcileFlow{% endblock %} {% block content %}
+<section class="card">
+  <div class="run-head">
+    <h1>Reconciling…</h1>
+    {% if demo %}<span class="tag">sample data</span>{% endif %}
+  </div>
+  <p class="muted">Run <code id="run-id" data-run-id="{{ run_id }}">{{ run_id }}</code></p>
+
+  <div class="progress" role="progressbar" aria-label="Reconciliation progress">
+    <div class="progress-fill" id="bar" style="width: 5%"></div>
+  </div>
+  <p class="phase" id="phase">Starting…</p>
+
+  <p class="muted small">
+    This can take a few seconds — longer when the live LLM and real email are
+    enabled. You can keep this tab open; it will update automatically.
+  </p>
+
+  <noscript>
+    <p class="banner err">
+      JavaScript is disabled, so this page can't auto-refresh.
+      <a href="/results/{{ run_id }}">Open the results</a> once the run finishes, or
+      <a href="/runs/{{ run_id }}">view the run status as JSON</a>.
+    </p>
+  </noscript>
+</section>
+
+<script>
+  (function () {
+    const el = document.getElementById("run-id");
+    const runId = el.getAttribute("data-run-id");
+    const bar = document.getElementById("bar");
+    const phase = document.getElementById("phase");
+
+    async function poll() {
+      try {
+        const res = await fetch(`/runs/${runId}/progress`, { cache: "no-store" });
+        if (res.status === 404) {
+          phase.textContent = "Run not found.";
+          return;
+        }
+        const data = await res.json();
+        phase.textContent = data.label || "Working…";
+        bar.style.width = (data.percent || 5) + "%";
+        if (data.done) {
+          window.location.href = data.redirect || `/results/${runId}`;
+          return;
+        }
+      } catch (err) {
+        /* transient network error — keep polling */
+      }
+      setTimeout(poll, 1500);
+    }
+
+    poll();
+  })();
+</script>
+{% endblock %}

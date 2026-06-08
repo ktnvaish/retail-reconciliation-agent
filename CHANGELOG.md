@@ -90,3 +90,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Made the `Dockerfile` portable across builders (removed BuildKit-only cache
   mounts) so Azure ACR / classic builds succeed.
 
+### CI/CD & UX
+
+- Added a **CD workflow** (`deploy.yml`) that builds in Azure Container Registry
+  and rolls out a SHA-tagged revision to Container Apps on push to `main`, with a
+  `/healthz` smoke test. Auth via an RG-scoped service-principal secret.
+- Web UI now runs reconciliation **asynchronously**: the upload returns a live
+  **progress page** that polls per-phase status (matching → deciding → sending →
+  done) and redirects to results, instead of blocking the request — fixing the
+  "looks frozen" feeling and avoiding ingress timeouts on long live runs.
+

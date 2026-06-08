@@ -114,6 +114,10 @@ With the defaults (`MOCK_LLM=true`, `NOTIFIER=mock`) the whole pipeline runs
 
 - **Upload** an orders file and a settlements file (or click **Run sample data**).
 - Toggle **Dry run** to compute and preview emails without sending.
+- The run executes in the background and a **live progress page** polls for
+  status — showing the current phase (matching → deciding → sending → done) — then
+  redirects to the results when complete, so the page never looks frozen on a
+  long live run.
 - The **results page** shows summary cards, a per-exception table (reason,
   amounts, SLA, severity, chosen action), and expandable email previews.
 - Follow the **audit JSON** link, or hit `GET /metrics`.
@@ -334,6 +338,9 @@ docs/                # PRD, PLAN, architecture, schema, resilience, telemetry, d
 
 - Single replica (SQLite is single-writer) — Postgres + Alembic would unlock
   horizontal scale.
+- Background runs are tracked in an in-memory registry, so a restart loses
+  in-flight *results* (the run itself is still recorded in SQLite). Persisting
+  the full outcome to the database is the next step for multi-replica.
 - Notifications dispatch sequentially — `asyncio.gather` for parallelism.
 - Fuzzy-match review is notify-only — an approve/reject callback endpoint is a
   natural follow-up.

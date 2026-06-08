@@ -22,6 +22,7 @@ from reconcile.agent.service import ReconciliationAgent, build_dependencies
 from reconcile.agent.state import AgentDependencies
 from reconcile.api.middleware import register_middleware
 from reconcile.api.routes import register_routes
+from reconcile.api.run_registry import RunRegistry
 from reconcile.config import AppConfig, AppSettings, get_settings, load_app_config
 from reconcile.db import create_db_engine, init_db
 from reconcile.logging_setup import configure_logging
@@ -42,6 +43,7 @@ class AppContext:
     deps: AgentDependencies
     agent: ReconciliationAgent
     templates: Jinja2Templates
+    run_registry: RunRegistry
 
 
 def build_context(settings: AppSettings | None = None) -> AppContext:
@@ -68,6 +70,7 @@ def build_context(settings: AppSettings | None = None) -> AppContext:
         deps=deps,
         agent=agent,
         templates=templates,
+        run_registry=RunRegistry(),
     )
 
 

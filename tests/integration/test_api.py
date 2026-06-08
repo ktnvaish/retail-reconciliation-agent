@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -40,6 +41,36 @@ def _files(samples_dir: Path) -> dict[str, tuple[str, bytes, str]]:
     }
 
 
+def _run_id_from(text: str) -> str:
+    """Extract the run id rendered on the progress page."""
+    match = re.search(r'data-run-id="([0-9a-f-]{36})"', text)
+    assert match is not None, "progress page did not contain a run id"
+    return match.group(1)
+
+
+def _wait_until_done(client: TestClient, run_id: str, *, timeout_s: float = 30.0) -> dict:
+    """Poll the progress endpoint until the run completes (or time out)."""
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        response = client.get(f"/runs/{run_id}/progress")
+        assert response.status_code == 200
+        payload = response.json()
+        if payload["done"]:
+            return payload
+        time.sleep(0.1)
+    raise AssertionError(f"run {run_id} did not finish within {timeout_s}s")
+
+
+def _run_demo_to_completion(client: TestClient, *, dry_run: bool = True) -> str:
+    """Trigger a demo run and block until it finishes; return the run id."""
+    response = client.post("/demo", data={"dry_run": str(dry_run).lower()})
+    assert response.status_code == 200
+    assert "Reconciling" in response.text
+    run_id = _run_id_from(response.text)
+    _wait_until_done(client, run_id)
+    return run_id
+
+
 def test_healthz(client: TestClient) -> None:
     response = client.get("/healthz")
     assert response.status_code == 200
@@ -53,16 +84,21 @@ def test_index_page(client: TestClient) -> None:
 
 
 def test_demo_endpoint_runs(client: TestClient) -> None:
-    response = client.post("/demo", data={"dry_run": "true"})
-    assert response.status_code == 200
-    assert "Reconciliation result" in response.text
-    assert "/runs/" in response.text
+    run_id = _run_demo_to_completion(client, dry_run=True)
+    results = client.get(f"/results/{run_id}")
+    assert results.status_code == 200
+    assert "Reconciliation result" in results.text
 
 
 def test_reconcile_with_uploads(client: TestClient, samples_dir: Path) -> None:
     response = client.post("/reconcile", files=_files(samples_dir), data={"dry_run": "true"})
     assert response.status_code == 200
-    assert "Reconciliation result" in response.text
+    assert "Reconciling" in response.text
+    run_id = _run_id_from(response.text)
+    _wait_until_done(client, run_id)
+    results = client.get(f"/results/{run_id}")
+    assert results.status_code == 200
+    assert "Reconciliation result" in results.text
 
 
 def test_reconcile_invalid_file_shows_errors(client: TestClient) -> None:
@@ -74,13 +110,14 @@ def test_reconcile_invalid_file_shows_errors(client: TestClient) -> None:
             "text/csv",
         ),
     }
+    # Validation is still synchronous, so the error shows immediately.
     response = client.post("/reconcile", files=bad, data={"dry_run": "true"})
     assert response.status_code == 400
     assert "missing required column" in response.text.lower()
 
 
 def test_metrics_after_run(client: TestClient) -> None:
-    client.post("/demo", data={"dry_run": "false"})
+    _run_demo_to_completion(client, dry_run=False)
     response = client.get("/metrics")
     assert response.status_code == 200
     payload = response.json()
@@ -90,17 +127,27 @@ def test_metrics_after_run(client: TestClient) -> None:
 
 
 def test_run_detail(client: TestClient) -> None:
-    demo = client.post("/demo", data={"dry_run": "false"})
-    match = re.search(r"/runs/([0-9a-f-]{36})", demo.text)
-    assert match is not None
-    run_id = match.group(1)
-
+    run_id = _run_demo_to_completion(client, dry_run=False)
     response = client.get(f"/runs/{run_id}")
     assert response.status_code == 200
     payload = response.json()
     assert payload["run"]["id"] == run_id
     assert payload["events"]
     assert payload["notifications"]
+
+
+def test_progress_then_results(client: TestClient) -> None:
+    response = client.post("/demo", data={"dry_run": "true"})
+    run_id = _run_id_from(response.text)
+    final = _wait_until_done(client, run_id)
+    assert final["status"] == "completed"
+    assert final["percent"] == 100
+    assert final["redirect"] == f"/results/{run_id}"
+
+
+def test_progress_unknown_run_404(client: TestClient) -> None:
+    response = client.get("/runs/does-not-exist/progress")
+    assert response.status_code == 404
 
 
 def test_run_detail_not_found(client: TestClient) -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from datetime import date
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -9,11 +10,14 @@ from typing import TYPE_CHECKING, Any
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse
 
+from reconcile.agent.service import RunOutcome
 from reconcile.api.metrics import build_metrics_snapshot
+from reconcile.api.progress import compute_progress
 from reconcile.audit.idempotency import compute_input_hash
 from reconcile.audit.repository import AuditRepository
 from reconcile.incidents.models import FailureType
 from reconcile.logging_setup import get_logger, new_run_id
+from reconcile.models.domain import Order, Settlement
 from reconcile.parsers import ParseError, read_orders, read_settlements
 
 if TYPE_CHECKING:
@@ -42,6 +46,42 @@ def _check_size(*blobs: bytes) -> None:
     for blob in blobs:
         if len(blob) > _MAX_UPLOAD_BYTES:
             raise HTTPException(status_code=413, detail="Uploaded file exceeds the 5 MB limit.")
+
+
+def _start_background_run(
+    context: AppContext,
+    run_id: str,
+    *,
+    orders: list[Order],
+    settlements: list[Settlement],
+    as_of_date: date,
+    dry_run: bool,
+    demo: bool,
+    input_hash: str | None = None,
+) -> None:
+    """Register and launch a reconciliation run on a background daemon thread.
+
+    Parsing/validation has already happened synchronously by this point, so the
+    background work is purely the (potentially slow) agent pipeline.
+    """
+    context.run_registry.start(run_id, demo=demo)
+
+    def _worker() -> None:
+        try:
+            outcome = context.agent.run(
+                orders=orders,
+                settlements=settlements,
+                run_id=run_id,
+                as_of_date=as_of_date,
+                input_hash=input_hash,
+                dry_run=dry_run,
+            )
+            context.run_registry.set_outcome(run_id, outcome)
+        except Exception as exc:  # defensive: surface unexpected failures to the UI
+            _log.error("background_run_failed", run_id=run_id, error=str(exc))
+            context.run_registry.set_error(run_id, str(exc))
+
+    threading.Thread(target=_worker, name=f"run-{run_id[:8]}", daemon=True).start()
 
 
 def register_routes(app: FastAPI) -> None:
@@ -96,31 +136,69 @@ def register_routes(app: FastAPI) -> None:
                 status_code=400,
             )
 
-        input_hash = compute_input_hash(orders_bytes, settlements_bytes)
-        outcome = context.agent.run(
+        run_id = new_run_id()
+        _start_background_run(
+            context,
+            run_id,
             orders=parsed_orders,
             settlements=parsed_settlements,
             as_of_date=date.today(),
-            input_hash=input_hash,
             dry_run=dry_run,
+            demo=False,
+            input_hash=compute_input_hash(orders_bytes, settlements_bytes),
         )
         return context.templates.TemplateResponse(
-            request, "results.html", {"outcome": outcome, "demo": False}
+            request, "progress.html", {"run_id": run_id, "demo": False}
         )
 
     @app.post("/demo", response_class=HTMLResponse)
     async def demo_endpoint(request: Request, dry_run: bool = Form(False)) -> HTMLResponse:
         context = _context(request)
-        orders = read_orders(_SAMPLES_DIR / "orders_sample.csv")
-        settlements = read_settlements(_SAMPLES_DIR / "settlements_sample.csv")
-        outcome = context.agent.run(
-            orders=orders,
-            settlements=settlements,
+        parsed_orders = read_orders(_SAMPLES_DIR / "orders_sample.csv")
+        parsed_settlements = read_settlements(_SAMPLES_DIR / "settlements_sample.csv")
+
+        run_id = new_run_id()
+        _start_background_run(
+            context,
+            run_id,
+            orders=parsed_orders,
+            settlements=parsed_settlements,
             as_of_date=date(2026, 6, 8),
             dry_run=dry_run,
+            demo=True,
         )
         return context.templates.TemplateResponse(
-            request, "results.html", {"outcome": outcome, "demo": True}
+            request, "progress.html", {"run_id": run_id, "demo": True}
+        )
+
+    @app.get("/runs/{run_id}/progress")
+    async def run_progress(request: Request, run_id: str) -> dict[str, Any]:
+        info = compute_progress(_context(request), run_id)
+        if info is None:
+            raise HTTPException(status_code=404, detail="Run not found.")
+        return info
+
+    @app.get("/results/{run_id}", response_class=HTMLResponse)
+    async def results_page(request: Request, run_id: str) -> HTMLResponse:
+        context = _context(request)
+        record = context.run_registry.get(run_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Run not found.")
+        if record.state == "pending":
+            # Not finished yet — keep showing progress (it will redirect on done).
+            return context.templates.TemplateResponse(
+                request, "progress.html", {"run_id": run_id, "demo": record.demo}
+            )
+        if record.state == "error" or record.outcome is None:
+            return context.templates.TemplateResponse(
+                request,
+                "error.html",
+                {"message": record.error or "The run failed unexpectedly.", "errors": []},
+                status_code=500,
+            )
+        outcome: RunOutcome = record.outcome
+        return context.templates.TemplateResponse(
+            request, "results.html", {"outcome": outcome, "demo": record.demo}
         )
 
     @app.get("/runs/{run_id}")
