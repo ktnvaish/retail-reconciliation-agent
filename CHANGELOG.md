@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Initial project scaffold: `uv`-managed Python 3.11 project with `src/` layout.
 - Tooling: `ruff` (lint + format), `mypy --strict`, `pytest` + coverage,
   pre-commit hooks, and GitHub Actions CI.
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reconciliation outcome.
 
 ### Reconciliation core
+
 - Obligation builder with per-order sum validation (`ORDER_SUM_MISMATCH`).
 - Deterministic matcher: key matching (`gateway_txn_id`, then
   `(order_id, payment_type)`), amount comparison (matched / short / excess /
@@ -35,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `responsible_party` override, plus stable `mismatch_key` computation.
 
 ### Notifications, resilience & incidents
+
 - Notifier protocol with mock / Resend / SMTP implementations and a factory.
 - `NotificationService`: idempotent, retried (tenacity), circuit-broken
   (pybreaker) email dispatch that records every attempt.
@@ -45,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   store, and a durable admin notifier (console always, email best-effort).
 
 ### Agent
+
 - LLM client abstraction with a deterministic offline mock and a Groq-backed
   implementation (retries + per-run call budget + template fallback).
 - LangGraph state machine: reconcile → (optional fuzzy match) → classify →
@@ -55,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dry-run mode, and a rich `RunOutcome` for the UI/CLI.
 
 ### API, UI & CLI
+
 - FastAPI app with a minimal Jinja2 web UI (upload page, results page with
   summary cards, exception table, and expandable email previews).
 - Endpoints: `GET /`, `POST /reconcile`, `POST /demo`, `GET /runs/{id}`,
@@ -64,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `python -m reconcile`).
 
 ### Deployment, docs & e2e
+
 - Multi-stage `Dockerfile` (uv builder + slim non-root runtime, binds `$PORT`),
   `.dockerignore`, and `compose.yaml` for local container runs.
 - Azure Container Apps deployment guide (`deploy/azure-container-app.md`).
@@ -72,3 +78,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - End-to-end tests asserting correct recipient routing, incident-on-bad-input,
   and the CLI demo flow.
 - Comprehensive README (setup, usage, schema, design decisions, deployment).
+
+### Live deployment & hardening
+
+- Deployed to **Azure Container Apps** (single replica, external HTTPS) with
+  real Groq LLM and real Resend email, verified end-to-end from the cloud.
+- Hardened the LLM boundary after a live run: `FuzzyPairing` ids are now
+  nullable (real models emit `null` for unpairable rows) and filtered on apply;
+  fuzzy matching degrades gracefully instead of failing the run; `decide()`
+  falls back to deterministic rules on LLM error.
+- Made the `Dockerfile` portable across builders (removed BuildKit-only cache
+  mounts) so Azure ACR / classic builds succeed.
+

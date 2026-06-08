@@ -10,6 +10,10 @@
 ![Python](https://img.shields.io/badge/python-3.11+-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
+**🚀 Live demo:** <https://reconcileflow.niceforest-73b0e6ad.centralindia.azurecontainerapps.io/>
+&nbsp;·&nbsp; running on Azure Container Apps with **real Groq LLM + real Resend email**.
+Open it, click **Run sample data**, and watch the agent reconcile, decide, and dispatch.
+
 ---
 
 ## Contents
@@ -135,33 +139,33 @@ We define the formats. Both `.xlsx` and `.csv` are accepted. Full reference:
 
 **Orders** — one row per payment obligation (an order may span multiple rows):
 
-| Column | Required | Notes |
-|---|---|---|
-| `order_id` | yes | Repeated across an order's payment rows |
-| `order_date` | yes | `YYYY-MM-DD` |
-| `store_id` | yes | |
-| `amount` | yes | Order gross total (same on every row of the order) |
-| `payment_type` | yes | `CASH \| UPI \| CARD \| NETBANKING \| WALLET` |
-| `payment_amount` | yes | This obligation's amount |
-| `payment_gateway` | if online | `RAZORPAY \| PAYU \| CASHFREE` |
-| `gateway_txn_id` | if online | Unique per online obligation |
-| `responsible_party` | no | Override role: `STORE_MANAGER \| PAYMENT_GATEWAY \| BANK \| ADMIN` |
-| `status` | yes | `PLACED \| CANCELLED` (only `PLACED` is reconciled) |
-| `customer_name`, `customer_email` | no | |
+| Column                            | Required  | Notes                                                              |
+| --------------------------------- | --------- | ------------------------------------------------------------------ |
+| `order_id`                        | yes       | Repeated across an order's payment rows                            |
+| `order_date`                      | yes       | `YYYY-MM-DD`                                                       |
+| `store_id`                        | yes       |                                                                    |
+| `amount`                          | yes       | Order gross total (same on every row of the order)                 |
+| `payment_type`                    | yes       | `CASH \| UPI \| CARD \| NETBANKING \| WALLET`                      |
+| `payment_amount`                  | yes       | This obligation's amount                                           |
+| `payment_gateway`                 | if online | `RAZORPAY \| PAYU \| CASHFREE`                                     |
+| `gateway_txn_id`                  | if online | Unique per online obligation                                       |
+| `responsible_party`               | no        | Override role: `STORE_MANAGER \| PAYMENT_GATEWAY \| BANK \| ADMIN` |
+| `status`                          | yes       | `PLACED \| CANCELLED` (only `PLACED` is reconciled)                |
+| `customer_name`, `customer_email` | no        |                                                                    |
 
 **Settlements** — one row per money-received entry:
 
-| Column | Required | Notes |
-|---|---|---|
-| `settlement_id` | yes | Unique within the file |
-| `settlement_date` | yes | `YYYY-MM-DD` |
-| `payment_type` | yes | Same enum as orders |
-| `amount` | yes | Gross amount |
-| `net_amount` | no | Defaults to `amount - fee` |
-| `fee` | no | Defaults to `0` |
-| `source` | yes | `BANK \| RAZORPAY \| PAYU \| CASHFREE` |
-| `order_id`, `gateway_txn_id` | no | Join keys (gateway txn preferred) |
-| `reference_id` | no | Bank/PG reference (e.g. UTR) |
+| Column                       | Required | Notes                                  |
+| ---------------------------- | -------- | -------------------------------------- |
+| `settlement_id`              | yes      | Unique within the file                 |
+| `settlement_date`            | yes      | `YYYY-MM-DD`                           |
+| `payment_type`               | yes      | Same enum as orders                    |
+| `amount`                     | yes      | Gross amount                           |
+| `net_amount`                 | no       | Defaults to `amount - fee`             |
+| `fee`                        | no       | Defaults to `0`                        |
+| `source`                     | yes      | `BANK \| RAZORPAY \| PAYU \| CASHFREE` |
+| `order_id`, `gateway_txn_id` | no       | Join keys (gateway txn preferred)      |
+| `reference_id`               | no       | Bank/PG reference (e.g. UTR)           |
 
 ## How reconciliation works
 
@@ -174,16 +178,16 @@ deterministic:
 
 Outcomes and routing:
 
-| Exception | Trigger | Notified |
-|---|---|---|
-| `CASH_MISSING` | cash order, no settlement | Store Manager |
-| `ONLINE_MISSING` | online obligation, no settlement (SLA breached) | Payment Gateway |
-| `LATE_SETTLEMENT` | online, unmatched, still within SLA grace | Payment Gateway (planner may `WAIT`) |
-| `AMOUNT_SHORT` / `AMOUNT_EXCESS` | settled less / more than expected | Payment Gateway + Store Manager |
-| `DUPLICATE_SETTLEMENT` | two settlements satisfy one obligation | Payment Gateway + Bank |
-| `UNMATCHED_SETTLEMENT` | settlement with no order | Bank + Payment Gateway |
-| `ORDER_SUM_MISMATCH` | an order's rows don't sum to its total | Store Manager |
-| `FUZZY_MATCH_REVIEW` | LLM pairing at medium confidence | Admin |
+| Exception                        | Trigger                                         | Notified                             |
+| -------------------------------- | ----------------------------------------------- | ------------------------------------ |
+| `CASH_MISSING`                   | cash order, no settlement                       | Store Manager                        |
+| `ONLINE_MISSING`                 | online obligation, no settlement (SLA breached) | Payment Gateway                      |
+| `LATE_SETTLEMENT`                | online, unmatched, still within SLA grace       | Payment Gateway (planner may `WAIT`) |
+| `AMOUNT_SHORT` / `AMOUNT_EXCESS` | settled less / more than expected               | Payment Gateway + Store Manager      |
+| `DUPLICATE_SETTLEMENT`           | two settlements satisfy one obligation          | Payment Gateway + Bank               |
+| `UNMATCHED_SETTLEMENT`           | settlement with no order                        | Bank + Payment Gateway               |
+| `ORDER_SUM_MISMATCH`             | an order's rows don't sum to its total          | Store Manager                        |
+| `FUZZY_MATCH_REVIEW`             | LLM pairing at medium confidence                | Admin                                |
 
 A row's `responsible_party`, when present, overrides the default routing.
 Idempotency is keyed on
@@ -223,9 +227,9 @@ See [docs/resilience.md](docs/resilience.md) for a walkthrough.
 
 - **Structured JSON logs** (`structlog`) to stdout, every line tagged with a
   correlating `run_id`. Pipe through `jq`:
-  ```bash
-  uv run reconcile demo 2>&1 | jq -r 'select(.run_id) | "\(.run_id[0:8]) \(.event)"'
-  ```
+    ```bash
+    uv run reconcile demo 2>&1 | jq -r 'select(.run_id) | "\(.run_id[0:8]) \(.event)"'
+    ```
 - **Append-only audit trail** in `audit_log` — one typed row per step
   (`event_type`, `action`, `reason`, `status`, `details`).
 - **`GET /metrics`** — run counts, exceptions by reason, notification outcomes,
@@ -243,16 +247,16 @@ addresses can be overridden per-deployment with `RECIPIENT_*` env vars
 
 Key variables (full list in [.env.example](.env.example)):
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `MOCK_LLM` | `true` | Use the offline deterministic LLM |
-| `NOTIFIER` | `mock` | `mock` \| `resend` \| `smtp` |
-| `GROQ_API_KEY` | — | Required when `MOCK_LLM=false` |
-| `RESEND_API_KEY` / `RESEND_FROM` | — | Required when `NOTIFIER=resend` |
-| `DATA_DIR` | `data/runtime` | Single writable dir (SQLite, incidents, outbox) |
-| `PORT` | `8000` | Web server binds `0.0.0.0:$PORT` |
-| `DEMO_ACCESS_KEY` | — | If set, gates `POST /reconcile` |
-| `MAX_LLM_CALLS` | `200` | Per-run LLM call budget |
+| Variable                         | Default        | Purpose                                         |
+| -------------------------------- | -------------- | ----------------------------------------------- |
+| `MOCK_LLM`                       | `true`         | Use the offline deterministic LLM               |
+| `NOTIFIER`                       | `mock`         | `mock` \| `resend` \| `smtp`                    |
+| `GROQ_API_KEY`                   | —              | Required when `MOCK_LLM=false`                  |
+| `RESEND_API_KEY` / `RESEND_FROM` | —              | Required when `NOTIFIER=resend`                 |
+| `DATA_DIR`                       | `data/runtime` | Single writable dir (SQLite, incidents, outbox) |
+| `PORT`                           | `8000`         | Web server binds `0.0.0.0:$PORT`                |
+| `DEMO_ACCESS_KEY`                | —              | If set, gates `POST /reconcile`                 |
+| `MAX_LLM_CALLS`                  | `200`          | Per-run LLM call budget                         |
 
 ## Testing
 
