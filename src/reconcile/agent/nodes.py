@@ -81,7 +81,23 @@ def reconcile_node(state: ReconciliationState, *, deps: AgentDependencies) -> di
 def fuzzy_node(state: ReconciliationState, *, deps: AgentDependencies) -> dict[str, Any]:
     obligations = list(state["unmatched_obligations"])
     settlements = list(state["unmatched_settlements"])
-    proposal = deps.llm.propose_fuzzy(obligations, settlements)
+
+    # Fuzzy matching is an optional enhancement: if the LLM call fails, degrade
+    # gracefully to "no pairings" rather than failing the whole reconciliation.
+    try:
+        proposal = deps.llm.propose_fuzzy(obligations, settlements)
+        pairings = proposal.pairings
+    except Exception as exc:  # any LLM/provider error here is non-fatal
+        _log.warning("fuzzy_match_skipped", error=str(exc))
+        with deps.session_factory() as session:
+            AuditRepository(session).log_event(
+                state["run_id"],
+                "fuzzy_match_skipped",
+                status="degraded",
+                details={"error": str(exc)},
+            )
+            session.commit()
+        pairings = []
 
     auto_threshold = deps.config.fuzzy_match.auto_apply_threshold
     review_threshold = deps.config.fuzzy_match.review_threshold
@@ -94,7 +110,10 @@ def fuzzy_node(state: ReconciliationState, *, deps: AgentDependencies) -> dict[s
     auto_applied = []
     events: list[tuple[str, str | None, str]] = []
 
-    for pairing in sorted(proposal.pairings, key=lambda p: p.confidence, reverse=True):
+    for pairing in sorted(pairings, key=lambda p: p.confidence, reverse=True):
+        # Skip placeholder rows the model may emit for unmatchable orders.
+        if pairing.order_id is None or pairing.settlement_id is None:
+            continue
         obligation = obl_by_order.get(pairing.order_id)
         settlement = settle_by_id.get(pairing.settlement_id)
         if obligation is None or settlement is None:

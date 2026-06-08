@@ -55,6 +55,10 @@ def fuzzy_prompt(obligations_text: str, settlements_text: str) -> str:
         "likely pairings ONLY when the amounts match and the dates/sources are "
         "plausibly related. Give each a confidence in [0,1] and a short rationale. "
         "Do not pair rows with different amounts.\n\n"
+        "Return ONLY real pairings: every item must have a concrete order_id AND "
+        "settlement_id from the lists below. Do NOT include orders you cannot pair, "
+        "and never use null for either id. If there are no plausible pairings, "
+        "return an empty list.\n\n"
         f"UNMATCHED ORDERS:\n{obligations_text}\n\n"
         f"UNMATCHED SETTLEMENTS:\n{settlements_text}\n"
     )

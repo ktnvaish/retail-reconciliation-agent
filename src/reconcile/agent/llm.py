@@ -175,7 +175,15 @@ class GroqLLMClient:
         prompt = decide_prompt(
             exception, within_sla=within_sla, high_value_threshold=str(high_value_threshold)
         )
-        return self._invoke(ExceptionDecision, prompt)
+        try:
+            return self._invoke(ExceptionDecision, prompt)
+        except (LLMTransientError, LLMBudgetExceededError) as exc:
+            # Degrade to a deterministic decision rather than failing the run;
+            # the planner still enforces the action allow-list downstream.
+            _log.warning("decide_fallback_to_rules", error=str(exc))
+            return self._fallback.decide(
+                exception, within_sla=within_sla, high_value_threshold=high_value_threshold
+            )
 
     def draft_email(self, exception: ExceptionRecord, role: RecipientRole, tag: str) -> EmailDraft:
         try:

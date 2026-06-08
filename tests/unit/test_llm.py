@@ -9,7 +9,13 @@ from typing import Any
 import pytest
 
 from reconcile.agent.llm import GroqLLMClient, LLMBudgetExceededError, MockLLMClient
-from reconcile.agent.schemas import EmailDraft, ExceptionDecision, FuzzyProposal, Severity
+from reconcile.agent.schemas import (
+    EmailDraft,
+    ExceptionDecision,
+    FuzzyPairing,
+    FuzzyProposal,
+    Severity,
+)
 from reconcile.models.domain import (
     ExceptionReason,
     ExceptionRecord,
@@ -104,6 +110,15 @@ def test_mock_fuzzy_skips_amount_mismatch() -> None:
     assert proposal.pairings == []
 
 
+def test_fuzzy_pairing_allows_null_ids() -> None:
+    # Real models sometimes emit placeholder rows for unmatchable orders;
+    # the schema must accept null ids (they are filtered out on application).
+    pairing = FuzzyPairing(order_id="O1", settlement_id=None, confidence=0.0, rationale="no match")
+    assert pairing.settlement_id is None
+    proposal = FuzzyProposal(pairings=[pairing])
+    assert proposal.pairings[0].order_id == "O1"
+
+
 def test_mock_draft_email_contains_facts() -> None:
     client = MockLLMClient()
     draft = client.draft_email(
@@ -158,14 +173,19 @@ def test_groq_propose_fuzzy_uses_model() -> None:
 
 
 def test_groq_budget_exceeded() -> None:
-    client = _groq_with_fake(max_calls=1)
-    client.decide(
+    # propose_fuzzy has no fallback, so the budget error surfaces there.
+    client = _groq_with_fake(max_calls=0)
+    with pytest.raises(LLMBudgetExceededError):
+        client.propose_fuzzy([make_obligation()], [make_settlement()])
+
+
+def test_groq_decide_falls_back_to_rules_on_budget() -> None:
+    # decide() degrades to a deterministic rules-based decision instead of failing.
+    client = _groq_with_fake(max_calls=0)
+    decision = client.decide(
         _exc(ExceptionReason.CASH_MISSING), within_sla=False, high_value_threshold=THRESHOLD
     )
-    with pytest.raises(LLMBudgetExceededError):
-        client.decide(
-            _exc(ExceptionReason.CASH_MISSING), within_sla=False, high_value_threshold=THRESHOLD
-        )
+    assert decision.action.value == "EMAIL_STORE_MANAGER"
 
 
 def test_groq_draft_falls_back_to_template_on_budget() -> None:

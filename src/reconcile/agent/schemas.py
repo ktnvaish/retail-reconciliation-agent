@@ -33,12 +33,18 @@ class ExceptionDecision(BaseModel):
 
 
 class FuzzyPairing(BaseModel):
-    """A proposed pairing between an unmatched obligation and settlement."""
+    """A proposed pairing between an unmatched obligation and settlement.
+
+    The ids are nullable because real models sometimes emit placeholder rows for
+    orders they could not pair (``settlement_id: null``); such rows are filtered
+    out during application rather than rejected, so a single odd row never fails
+    the whole structured-output call.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    order_id: str
-    settlement_id: str
+    order_id: str | None = None
+    settlement_id: str | None = None
     confidence: float = Field(ge=0.0, le=1.0)
     rationale: str = Field(min_length=1, max_length=300)
 
